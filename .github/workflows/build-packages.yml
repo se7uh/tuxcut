@@ -45,6 +45,7 @@ jobs:
           pip install requests
           pip install APScheduler
           pip install setproctitle
+          pip install wxPython
           pip install pyinstaller
 
       - name: Build binaries
