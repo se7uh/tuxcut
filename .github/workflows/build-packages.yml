@@ -23,7 +23,6 @@ jobs:
           sudo apt-get install -y \
             ruby ruby-dev rubygems build-essential \
             libgtk-3-dev \
-            libwebkitgtk-3.0-dev \
             libsdl2-dev \
             libnotify-dev \
             freeglut3-dev \
@@ -34,7 +33,8 @@ jobs:
             libtiff-dev \
             libsdl1.2-dev \
             libgstreamer-plugins-base1.0-dev \
-            libwebkit2gtk-4.0-dev
+            libwebkit2gtk-4.0-dev \
+            gir1.2-webkit2-4.0
           sudo gem install --no-document fpm
 
       - name: Install Python dependencies
