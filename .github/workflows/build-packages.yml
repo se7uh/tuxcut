@@ -50,15 +50,7 @@ jobs:
       - name: Install Python dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install bottle==0.12.25
-          pip install scapy
-          pip install netifaces
-          pip install requests
-          pip install APScheduler
-          pip install setproctitle
-          pip install wxPython
-          pip install pyinstaller
-
+          python -m pip install -r requirements.txt
       - name: Build binaries
         run: |
           pyinstaller -s -F server/tuxcutd.py
