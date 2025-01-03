@@ -1,0 +1,87 @@
+name: Build Packages
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ruby ruby-dev rubygems build-essential
+          sudo gem install --no-document fpm
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pyinstaller
+
+      - name: Build binaries
+        run: |
+          pyinstaller -s -F server/tuxcutd.py
+          pyinstaller -s -F client/tuxcut.py
+
+      - name: Prepare package files
+        run: |
+          rm -rf pkg/opt/tuxcut/*
+          mv dist/tuxcut pkg/opt/tuxcut/
+          mv dist/tuxcutd pkg/opt/tuxcut/
+
+      - name: Get version
+        id: get_version
+        run: |
+          VERSION=${GITHUB_REF#refs/tags/v}
+          if [ "$GITHUB_REF" == "" ]; then
+            VERSION=0.0.0
+          fi
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Build DEB package
+        run: |
+          fpm -s dir -t deb \
+            -n tuxcut \
+            -v ${{ steps.get_version.outputs.version }} \
+            -d "libpcap0.8" \
+            -d "arptables" \
+            -d "dnsutils" \
+            -d "net-tools" \
+            -C pkg
+
+      - name: Build RPM package
+        run: |
+          fpm -s dir -t rpm \
+            -n tuxcut \
+            -v ${{ steps.get_version.outputs.version }} \
+            -d "libpcap" \
+            -d "arptables" \
+            -d "bind-utils" \
+            -d "net-tools" \
+            -C pkg
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: packages
+          path: |
+            *.deb
+            *.rpm
+
+      - name: Release
+        uses: softprops/action-gh-release@v1
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          files: |
+            *.deb
+            *.rpm
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} 
