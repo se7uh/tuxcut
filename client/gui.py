@@ -18,36 +18,58 @@ import wx.dataview
 class MainFrame ( wx.Frame ):
 	
 	def __init__( self, parent ):
-		wx.Frame.__init__ ( self, parent, id = wx.ID_ANY, title = u"TuxCut", pos = wx.DefaultPosition, size = wx.Size( 750,400 ), style = wx.CAPTION|wx.CLOSE_BOX|wx.MINIMIZE_BOX )
+		super().__init__(
+			parent, 
+			id=wx.ID_ANY,
+			title="TuxCut",
+			pos=wx.DefaultPosition,
+			size=wx.Size(750, 400),
+			style=wx.CAPTION | wx.CLOSE_BOX | wx.MINIMIZE_BOX | wx.RESIZE_BORDER
+		)
 		
-		self.SetSizeHints( wx.Size( 750,400 ), wx.Size( 750,400 ) )
+		self.SetMinSize(wx.Size(750, 400))
 		
-		bSizer7 = wx.BoxSizer( wx.VERTICAL )
+		main_sizer = wx.BoxSizer(wx.VERTICAL)
 		
-		bSizer2 = wx.BoxSizer( wx.HORIZONTAL )
+		protection_sizer = wx.BoxSizer(wx.HORIZONTAL)
+		self.cb_protection = wx.CheckBox(
+			self,
+			wx.ID_ANY,
+			"Protect My Computer",
+			wx.DefaultPosition,
+			wx.DefaultSize
+		)
+		protection_sizer.Add(self.cb_protection, 0, wx.ALL, 5)
+		main_sizer.Add(protection_sizer, 0, 0, 5)
 		
-		self.cb_protection = wx.CheckBox( self, wx.ID_ANY, u"Protect My Computer", wx.DefaultPosition, wx.DefaultSize, 0 )
-		bSizer2.Add( self.cb_protection, 0, wx.ALL, 5 )
+		self.hosts_view = wx.dataview.DataViewListCtrl(
+			self,
+			wx.ID_ANY,
+			wx.DefaultPosition,
+			wx.Size(-1, -1),
+			wx.dataview.DV_ROW_LINES | wx.DOUBLE_BORDER
+		)
+		self.hosts_view.SetFont(
+			wx.Font(
+				10,
+				wx.FONTFAMILY_DEFAULT,
+				wx.FONTSTYLE_NORMAL,
+				wx.FONTWEIGHT_NORMAL,
+				False
+			)
+		)
 		
+		main_sizer.Add(self.hosts_view, 1, wx.ALL | wx.EXPAND, 5)
 		
-		bSizer7.Add( bSizer2, 0, 0, 5 )
-		
-		self.hosts_view = wx.dataview.DataViewListCtrl( self, wx.ID_ANY, wx.DefaultPosition, wx.Size( -1,-1 ), wx.dataview.DV_ROW_LINES|wx.DOUBLE_BORDER )
-		self.hosts_view.SetFont( wx.Font( 10, wx.FONTFAMILY_DEFAULT, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_NORMAL, False, wx.EmptyString ) )
-		
-		bSizer7.Add( self.hosts_view, 1, wx.ALIGN_CENTER|wx.ALIGN_CENTER_HORIZONTAL|wx.ALIGN_CENTER_VERTICAL|wx.ALL|wx.EXPAND, 5 )
-		
-		
-		self.SetSizer( bSizer7 )
+		self.SetSizer(main_sizer)
 		self.Layout()
-		self.toolbar = self.CreateToolBar( 0, wx.ID_ANY ) 
-		self.toolbar.Realize() 
 		
+		self.toolbar = self.CreateToolBar(0, wx.ID_ANY)
+		self.toolbar.Realize()
 		
-		self.Centre( wx.BOTH )
+		self.Centre(wx.BOTH)
 		
-		# Connect Events
-		self.cb_protection.Bind( wx.EVT_CHECKBOX, self.toggle_protection )
+		self.cb_protection.Bind(wx.EVT_CHECKBOX, self.toggle_protection)
 	
 	def __del__( self ):
 		pass

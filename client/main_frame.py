@@ -11,19 +11,20 @@ from gui import MainFrame
 import icons
 
 APP_DIR = os.path.join(str(Path.home()), '.tuxcut')
-if not os.path.isdir(APP_DIR):
-    os.mkdir(APP_DIR)
-    client_log = Path(os.path.join(APP_DIR, 'tuxcut.log'))
-    client_log.touch(exist_ok=True)
-    client_log.chmod(0o666)
+Path(APP_DIR).mkdir(exist_ok=True)
+client_log = Path(os.path.join(APP_DIR, 'tuxcut.log'))
+client_log.touch(exist_ok=True)
+client_log.chmod(0o666)
 
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.FileHandler(os.path.join(APP_DIR, 'tuxcut.log')),
+        logging.StreamHandler()
+    ]
+)
 logger = logging.getLogger('tuxcut-client')
-handler = logging.FileHandler(os.path.join(APP_DIR, 'tuxcut.log'))
-formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-handler.setFormatter(formatter)
-logger.addHandler(handler)
-
 
 class MainFrameView(MainFrame):
     def __init__(self, parent):
@@ -33,34 +34,43 @@ class MainFrameView(MainFrame):
         self.Centre()
 
         self.SetIcon(icons.ninja_32.GetIcon())
+        
+        # Use context manager for shelve
+        with shelve.open(os.path.join(APP_DIR, 'aliases.db')) as aliases:
+            self.aliases = dict(aliases)
 
-        self.aliases = shelve.open( os.path.join(APP_DIR, 'aliases.db'))
         # initialize
-        self._gw = dict()
-        self._my = dict()
-        self.live_hosts = list()
-        self._offline_hosts = list()
+        self._gw = {}
+        self._my = {}
+        self.live_hosts = []
+        self._offline_hosts = []
 
         # Check tuxcut server
         if not self.is_server():
             self.show_dialog('error',
-                             'TuxCut Server stopped',
-                             'use "systemctl start tuxcutd" then restart the application')
+                           'TuxCut Server stopped',
+                           'use "systemctl start tuxcutd" then restart the application')
             self.Close()
-        else:
-            # Get the gw
-            self.get_gw()
-            iface = self._gw['iface']
-            self.get_my(iface)
+            return
 
-            # setup host_view
-            self.hosts_view.AppendIconTextColumn('', width=30)
-            self.hosts_view.AppendTextColumn('IP Address', width=150)
-            self.hosts_view.AppendTextColumn('MAC Address', width=150)
-            self.hosts_view.AppendTextColumn('Hostname', width=200)
-            self.hosts_view.AppendTextColumn('Alias')
+        # Get the gw
+        self.get_gw()
+        iface = self._gw.get('iface')
+        if not iface:
+            self.show_dialog('error', 'Error', 'No network interface found')
+            self.Close()
+            return
 
-            self.trigger_thread()
+        self.get_my(iface)
+
+        # setup host_view
+        self.hosts_view.AppendIconTextColumn('', width=30)
+        self.hosts_view.AppendTextColumn('IP Address', width=150)
+        self.hosts_view.AppendTextColumn('MAC Address', width=150)
+        self.hosts_view.AppendTextColumn('Hostname', width=200)
+        self.hosts_view.AppendTextColumn('Alias')
+
+        self.trigger_thread()
 
     def setup_toolbar(self):
         tbtn_refresh = self.toolbar.AddTool(-1, '', icons.refresh_32.GetBitmap(), shortHelp='Refresh')
