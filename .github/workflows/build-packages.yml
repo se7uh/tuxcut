@@ -61,9 +61,10 @@ jobs:
       - name: Get version
         id: get_version
         run: |
-          VERSION=${GITHUB_REF#refs/tags/v}
-          if [ "$GITHUB_REF" == "" ]; then
-            VERSION=0.0.0
+          if [[ $GITHUB_REF == refs/tags/* ]]; then
+            VERSION=${GITHUB_REF#refs/tags/v}
+          else
+            VERSION=$(date +'%Y.%m.%d')
           fi
           echo "version=$VERSION" >> $GITHUB_OUTPUT
 
@@ -72,6 +73,7 @@ jobs:
           fpm -s dir -t deb \
             -n tuxcut \
             -v ${{ steps.get_version.outputs.version }} \
+            --iteration 1 \
             -d "libpcap0.8" \
             -d "arptables" \
             -d "dnsutils" \
@@ -83,6 +85,7 @@ jobs:
           fpm -s dir -t rpm \
             -n tuxcut \
             -v ${{ steps.get_version.outputs.version }} \
+            --iteration 1 \
             -d "libpcap" \
             -d "arptables" \
             -d "bind-utils" \
