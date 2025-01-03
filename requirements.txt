@@ -17,4 +17,3 @@ scapy-python3==0.25
 setproctitle==1.1.10
 six==1.10.0
 tzlocal==1.4
-wxPython==4.0.3
