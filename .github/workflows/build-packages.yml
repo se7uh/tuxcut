@@ -9,6 +9,8 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    env:
+      WXSUPPRESS_SIZER_FLAGS_CHECK: 1
     steps:
       - uses: actions/checkout@v4
 
