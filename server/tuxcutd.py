@@ -101,22 +101,69 @@ def scan(gw_ip):
     response.headers['Content-Type'] = 'application/json'
     live_hosts = list()
     logger.info('Start scanning {}'.format(gw_ip))
-    ans, unans = arping('{}/24'.format(gw_ip), verbose=False)
-    logger.info('ans: {}'.format(ans))
-    logger.info('unans: {} '.format(unans))
-    for i in range(0, len(ans)):
-        live_hosts.append({
-            'ip': ans[i][1].psrc,
-            'mac': ans[i][1].hwsrc,
-            'hostname': get_hostname(ans[i][1].psrc)
+    
+    try:
+        # Use more aggressive scanning
+        conf.verb = 0  # Suppress scapy output
+        
+        # First try ARP scan
+        ans, unans = srp(Ether(dst="ff:ff:ff:ff:ff:ff")/ARP(pdst=f"{gw_ip}/24"), 
+                        timeout=2, verbose=False)
+        
+        # Process responses
+        for snd, rcv in ans:
+            try:
+                host = {
+                    'ip': rcv.psrc,
+                    'mac': rcv.hwsrc,
+                    'hostname': get_hostname(rcv.psrc)
+                }
+                if host not in live_hosts:
+                    live_hosts.append(host)
+                    logger.debug(f"Found host: {host}")
+            except Exception as e:
+                logger.error(f"Error processing host {rcv.psrc}: {str(e)}")
+        
+        # If no hosts found, try ping scan as fallback
+        if not live_hosts:
+            logger.info("ARP scan found no hosts, trying ping scan...")
+            ans, unans = sr(IP(dst=f"{gw_ip}/24")/ICMP(), timeout=2, verbose=False)
+            for snd, rcv in ans:
+                try:
+                    # Get MAC using ARP
+                    arp_ans = srp1(Ether(dst="ff:ff:ff:ff:ff:ff")/ARP(pdst=rcv.src), 
+                                timeout=1, verbose=False)
+                    if arp_ans:
+                        host = {
+                            'ip': rcv.src,
+                            'mac': arp_ans.hwsrc,
+                            'hostname': get_hostname(rcv.src)
+                        }
+                        if host not in live_hosts:
+                            live_hosts.append(host)
+                            logger.debug(f"Found host via ping: {host}")
+                except Exception as e:
+                    logger.error(f"Error processing ping response from {rcv.src}: {str(e)}")
+        
+        logger.info(f'Found {len(live_hosts)} live hosts')
+        logger.debug(f'Live hosts: {json.dumps(live_hosts)}')
+        
+        return json.dumps({
+            'result': {
+                'status': 'success',
+                'hosts': live_hosts
+            }
         })
-    logger.info('live hosts: {}'.format(live_hosts))
-    return json.dumps({
-        'result': {
-            'status': 'success',
-            'hosts': live_hosts
-        }
-    })
+    except Exception as e:
+        logger.error(f"Scan error: {str(e)}")
+        logger.error(sys.exc_info()[1], exc_info=True)
+        return json.dumps({
+            'result': {
+                'status': 'error',
+                'msg': str(e),
+                'hosts': []
+            }
+        })
 
 
 @route('/protect', method='POST')
